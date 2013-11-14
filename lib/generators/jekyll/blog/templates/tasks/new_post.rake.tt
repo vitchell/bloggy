@@ -8,7 +8,19 @@ task :np do
   ARGV.shift
   title = ARGV.join(' ')
 
-  path = "config/jekyll/_posts/#{Date.today}-#{title.downcase.gsub(/[^[:alnum:]]+/, '-')}.markdown"
+  config = {'editor' => 'mate', 'extension' => 'markdown'}
+
+  begin  
+    if defined?(Rails) && File.exist?("#{Rails.root}/.bloggyrc")
+      config.merge!(YAML.load_file("#{Rails.root}/.bloggyrc"))
+    elsif File.exist?("#{Dir.home}/.bloggyrc")
+      config.merge!(YAML.load_file("#{Dir.home}/.bloggyrc"))
+    end
+  rescue TypeError
+    puts "[WARN] Failed to parse editor from .bloggyrc"
+  end
+
+  path = "config/jekyll/_posts/#{Date.today}-#{title.downcase.gsub(/[^[:alnum:]]+/, '-')}.#{config['extension']}"
   
   if File.exist?(path)
     puts "[WARN] File exists - skipping create"
@@ -17,18 +29,9 @@ task :np do
       file.puts YAML.dump({'layout' => 'post', 'published' => false, 'title' => title})
       file.puts "---"
     end
-
-    begin
-      config = {'editor' => 'mate'}
-      if File.exist?("#{Dir.home}/.bloggyrc")
-        config.merge!(YAML.load_file("#{Dir.home}/.bloggyrc"))
-      end
-    rescue TypeError
-      puts "[WARN] Failed to parse editor from .bloggyrc"
-    end
     
     begin
-    `#{config['editor']} #{path}`
+      `#{config['editor']} #{path}`
     rescue Exception
       puts "[WARN] Could not find editor #{config['editor']} - please edit #{path} manually"
     end
